@@ -31,9 +31,12 @@ int main() {
      * Объявите и проинициализируйте массив ar из объектов типа MyString.
      * Выведите элементы массива на консоль.
      */
-    //cout << "Ex.1.1" << endl;
+    cout << "Ex 1.1" << endl;
     {
-        MyString ar[5] = { MyString("Это мое болото"), MyString("4"), MyString()  };  
+        MyString ar[5] = { MyString("Это мое болото"), MyString("4"), MyString("здрасте")  };  
+        for (int i=0; i<3; i++){
+            ar[i].print();
+        }
     }
     /**
      * Замените размер массива с 3 на 5, не меняя список инициализаторов.
@@ -50,15 +53,18 @@ int main() {
      * Объявите и проинициализируйте массив arPtr из трех указателей на объекты
      * типа MyString. Выведите элементы массива на консоль.
      */
-    //cout << "Ex.1.2" << endl;
     {
-    MyString* arPtr[3];
+        cout << "Ex 1.2" << endl;
+        MyString* arPtr[3];
 
-    arPtr[0] = new MyString{"первый"};
-    arPtr[1] = new MyString{"второй"};
-    arPtr[2] = new MyString{"третий"};
-    for (int i=0; i<3; i++){ 
-        delete[] arPtr[i];
+        arPtr[0] = new MyString{"первый"};
+        arPtr[1] = new MyString{"второй"};
+        arPtr[2] = new MyString{"третий"};
+        for (int i=0; i<3; i++){
+            arPtr[i]->print();
+        }
+        for (int i=0; i<3; i++){ 
+            delete arPtr[i];
         }
     } 
         
@@ -107,7 +113,8 @@ int main() {
      * Проверьте работу этого класса.
      */
     {
-        BaseFile myFile("test.bin", "wb"); // Открываем для записи в бинарном режиме
+        cout << "Ex 2.1" << endl;
+        BaseFile myFile("test.bin", "wb"); 
         if (myFile.is_open()) {
             cout << "Файл открыт для записи" << endl;
 
@@ -128,7 +135,7 @@ int main() {
             }
 
             char buffer[10] = {0};
-            size_t readCount = myFile.read(buffer, 3);
+            size_t readCount = myFile.read(buffer, 5);
             
             cout << "Прочитано: " << buffer << " (байт: " << readCount << ")" << endl;
             cout << "Новая позиция: " << myFile.tell() << endl;
@@ -154,7 +161,30 @@ int main() {
      *
      * Проверьте работу производных классов.
      */
+    {
+        cout << "Ex 2.2.1" << endl;
+        Base32File myFile("test.bin", "wb"); 
+        if (myFile.is_open()) {
+            cout << "Файл открыт для записи" << endl;
 
+            const char* data = "Hello, World!";
+            size_t written = myFile.write(data, strlen(data));
+            cout << "Записано байт: " << written <<endl;
+            
+            cout<< "Текущая позиция (должна быть " << written << "): " << myFile.tell() <<endl;
+        }
+    }
+
+    {
+        Base32File myFile("test.bin", "rb");
+        if (myFile.is_open()) {
+            char buffer[30] = {0};
+            size_t readCount = myFile.read(buffer, 30);
+            
+            cout << "Прочитано: " << buffer << " (байт: " << readCount << ")" << endl;
+            cout << "Новая позиция: " << myFile.tell() << endl;
+        }
+    }
     /**
      * Задание 2.2.1. Base32 кодировщик/декодировщик.
      *
