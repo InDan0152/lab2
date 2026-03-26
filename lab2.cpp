@@ -13,8 +13,10 @@
  * При работе с классами - в учебных целях - нельзя пользоваться контейнерами
  * стандартной библиотеки и нужно следовать принципам инкапсуляции.
  */
-#include <iostream> 
+#include <iostream>
+#include <cstring> 
 #include "Mystring.hpp"
+#include "BaseFile.hpp"
 
 using namespace std;
 int main() {
@@ -104,7 +106,34 @@ int main() {
      *
      * Проверьте работу этого класса.
      */
+    {
+        BaseFile myFile("test.bin", "wb"); // Открываем для записи в бинарном режиме
+        if (myFile.is_open()) {
+            cout << "Файл открыт для записи" << endl;
 
+            const char* data = "Hello, World!";
+            size_t written = myFile.write(data, strlen(data));
+            cout << "Записано байт: " << written <<endl;
+            
+            cout<< "Текущая позиция (должна быть " << written << "): " << myFile.tell() <<endl;
+        }
+    }
+
+
+    {
+        BaseFile myFile("test.bin", "rb");
+        if (myFile.is_open()) {
+            if (myFile.seek(7)) {
+                cout << "Перепрыгнули на 7-й байт." << endl;
+            }
+
+            char buffer[10] = {0};
+            size_t readCount = myFile.read(buffer, 3);
+            
+            cout << "Прочитано: " << buffer << " (байт: " << readCount << ")" << endl;
+            cout << "Новая позиция: " << myFile.tell() << endl;
+        }
+    }
     /**
      * Задание 2.2. Производные классы.
      *
