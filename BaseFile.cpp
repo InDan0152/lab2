@@ -215,3 +215,48 @@ size_t Base32File::read(void *buf, size_t max_bytes) {
         return -1;
     }
 }
+void RleFile::write(const char* data, size_t size) {
+        size_t i = 0;
+        while (i < size) {
+            char current_char = data[i];
+            unsigned char count = 0;
+
+            // Считаем серию одинаковых байтов (макс 255)
+            while (i < size && data[i] == current_char && count < 255) {
+                count++;
+                i++;
+            }
+
+            // Записываем пару в файл через базовый метод
+            write_raw((char*)&count, 1);
+            write_raw(&current_char, 1);
+        }
+    }
+
+    // Чтение с распаковкой RLE
+    size_t RleFile::read(char* buffer, size_t size) {
+        size_t total_read = 0;
+
+        while (total_read < size) {
+            // Если предыдущая серия символов закончилась, читаем новую пару из файла
+            if (left_count == 0) {
+                unsigned char next_count;
+                char next_char;
+
+                // Пытаемся прочитать заголовок серии (1 байт количества)
+                if (read_raw((char*)&next_count, 1) < 1) break; 
+                // Читаем сам символ
+                if (read_raw(&next_char, 1) < 1) break;
+
+                left_count = next_count;
+                left_char = next_char;
+            }
+
+            // Заполняем буфер пользователя текущим символом
+            while (left_count > 0 && total_read < size) {
+                buffer[total_read++] = left_char;
+                left_count--;
+            }
+        }
+        return total_read;
+        }

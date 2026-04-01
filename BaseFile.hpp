@@ -41,3 +41,13 @@ class Base32File:public BaseFile{
     const char* encode_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456";
 
 };
+class RleFile : public BaseFile {
+private:
+    // Состояние для метода read: храним символ и сколько его еще осталось выдать
+    unsigned char left_count = 0; 
+    char left_char = 0;
+
+public:
+    void write(const char* data, size_t size);
+    size_t read(char* buffer, size_t size);
+};
