@@ -161,6 +161,7 @@ int main() {
      *
      * Проверьте работу производных классов.
      */
+    
     {
         cout << "Ex 2.2.1" << endl;
         Base32File myFile("test.bin", "wb"); 
@@ -183,6 +184,53 @@ int main() {
             
             cout << "Прочитано: " << buffer << " (байт: " << readCount << ")" << endl;
             cout << "Новая позиция: " << myFile.tell() << endl;
+        }
+    }
+
+
+    {
+        RleFile myFile("testRLE.bin", "wb");
+        if (myFile.is_open()){
+           const char* testmessage = "AAAAAAAAAAABC";
+           cout << "Записано  : " << testmessage << endl;
+           myFile.write(testmessage, 13);
+        }
+    }      
+
+    {
+        RleFile myFile("testRLE.bin", "rb");
+        if (myFile.is_open()){
+           char buffer[30] = {0};
+           size_t readCount = myFile.read(buffer, 30); 
+
+           cout << "Прочитано: " << buffer << " ( байт: "<< readCount << ") " << endl;
+           cout << "Новая позиция: " << myFile.tell() << endl;
+        }
+
+    }
+
+    {
+        char buffer[200] = {0};
+        size_t readCount=0;
+        BaseFile myFile("cat.txt", "rb");
+        if (myFile.is_open()) {           
+            readCount = myFile.read(buffer, 200);            
+            cout << "Прочитано (байт: " << readCount << ")" << endl;
+            RleFile myRleFile("catRle.txt", "wb");
+            if (myRleFile.is_open()){
+                size_t writeCount = myRleFile.write(buffer, readCount); 
+                cout << "Записано (байт: "<< writeCount << ")" << endl;
+            }
+        }
+    }
+        
+    {
+        cout << "RLE CAT" << endl;
+        RleFile myFile("catRle.txt", "rb");
+        if (myFile.is_open()){
+           char buffer[200] = {0};
+           size_t readCount = myFile.read(buffer, 200); 
+           cout << "Прочитано: " << endl << buffer << " ( байт: "<< readCount << ") " << endl;
         }
     }
     /**
@@ -244,32 +292,59 @@ int main() {
      * запись.
      */
 
-    /* {
-        BaseFile bf(...);
-        Base32File b32f(...);
-        RleFile rf(...);
+     {
+        BaseFile bf("1.txt","wb");
+        Base32File b32f("2.txt","wb");
+        RleFile rf("3.txt","wb");
+
+        const char minus = '-';
 
         int n = 123456;
-        if (n < 0) { bf.write(...); }
+        if (n < 0) { bf.write(&minus,1); n=-n; }        
+        int divisor=1;
+        int tn=n;
+        while(tn >= 10){
+            tn/=10;
+            divisor*=10;
+        }
         while (n > 0) {
-            bf.write(...);
-            // ...
+            char ch = '0' + (n / divisor);
+            bf.write(&ch,1);
+            n=n % divisor;
+            divisor/=10;
         }
 
         n = 123456;
-        if (n < 0) { b32f.write(...); }
+        if (n < 0) { b32f.write(&minus,1); n=-n; }
+        divisor=1;
+        tn=n;
+        while(tn >= 10){
+            tn/=10;
+            divisor*=10;
+        }
         while (n > 0) {
-            b32f.write(...);
-            // ...
+            char ch = '0' + (n / divisor);
+            b32f.write(&ch,1);
+            n=n % divisor;
+            divisor/=10;
         }
 
         n = 123456;
-        if (n < 0) { rf.write(...); }
-        while (n > 0) {
-            rf.write(...);
-            // ...
+        if (n < 0) { rf.write(&minus,1); n=-n; }
+        divisor=1;
+        tn=n;
+        while(tn >= 10){
+            tn/=10;
+            divisor*=10;
         }
-    } */
+        while (n > 0) {
+            char ch = '0' + (n / divisor);
+            rf.write(&ch,1);
+            n=n % divisor;
+            divisor/=10;
+        }
+
+    }
 
     /**
      * Задание 2.5. Передача объекта по ссылке / указателю.

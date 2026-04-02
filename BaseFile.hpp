@@ -1,8 +1,9 @@
 #include <cstdio>
+#include <iostream>
 using namespace std;
 
 class BaseFile{
-    private:
+    protected:
     FILE* file;
     bool readable = false;
     bool writable = false;
@@ -15,6 +16,7 @@ class BaseFile{
         if (file != nullptr) {
             fclose(file);
         }
+        //cout << "BaseFile Destructor" << endl;
     }
     bool is_open() {return (file);};
     bool can_read() {return readable;};
@@ -43,11 +45,10 @@ class Base32File:public BaseFile{
 };
 class RleFile : public BaseFile {
 private:
-    // Состояние для метода read: храним символ и сколько его еще осталось выдать
-    unsigned char left_count = 0; 
-    char left_char = 0;
-
 public:
-    void write(const char* data, size_t size);
-    size_t read(char* buffer, size_t size);
+    RleFile(const char* path, const char* par):BaseFile(path,par){
+        cout << "RleFile Constructor" << endl;
+    };
+    size_t write(const char* data, size_t size);
+    size_t read(char* buf, size_t size);
 };

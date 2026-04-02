@@ -1,6 +1,7 @@
 #include "BaseFile.hpp"
 #include <cstdio>
 #include <cstring>
+#include <iostream>
 using namespace std;
 
 bool strchr(const char* str, const char ch){
@@ -17,6 +18,7 @@ bool strchr(const char* str, const char ch){
 
 BaseFile::BaseFile(const char* path, const char* par) {
     file = fopen(path, par);
+    cout << "BaseFile Constructor" << path << " par=" << endl;
     if (file) { // "rb", "wb+", "ab", "ab+"
         if (strchr(par,'+')) { // strchr ищет символ 
             readable = true;
@@ -215,48 +217,68 @@ size_t Base32File::read(void *buf, size_t max_bytes) {
         return -1;
     }
 }
-void RleFile::write(const char* data, size_t size) {
+size_t RleFile::write(const char* data, size_t size) {
+        size_t writeCount=0;
         size_t i = 0;
-        while (i < size) {
+        while (i < size) {// AAAA AA4  AAA AA3 AA AA2 
             char current_char = data[i];
-            unsigned char count = 0;
+            unsigned short count = 0;
 
             // Считаем серию одинаковых байтов (макс 255)
-            while (i < size && data[i] == current_char && count < 255) {
+            while (i < size && data[i] == current_char && count < 257) {
                 count++;
                 i++;
             }
-
-            // Записываем пару в файл через базовый метод
-            write_raw((char*)&count, 1);
-            write_raw(&current_char, 1);
-        }
-    }
-
-    // Чтение с распаковкой RLE
-    size_t RleFile::read(char* buffer, size_t size) {
-        size_t total_read = 0;
-
-        while (total_read < size) {
-            // Если предыдущая серия символов закончилась, читаем новую пару из файла
-            if (left_count == 0) {
-                unsigned char next_count;
-                char next_char;
-
-                // Пытаемся прочитать заголовок серии (1 байт количества)
-                if (read_raw((char*)&next_count, 1) < 1) break; 
-                // Читаем сам символ
-                if (read_raw(&next_char, 1) < 1) break;
-
-                left_count = next_count;
-                left_char = next_char;
+            if (count>1){
+                // Записываем пару в файл через базовый метод
+                write_raw(&current_char, 1);
+                write_raw(&current_char, 1);
+                count-=2; // два у нас есть 
+                write_raw(&count, 1);
+                writeCount+=3;
             }
-
-            // Заполняем буфер пользователя текущим символом
-            while (left_count > 0 && total_read < size) {
-                buffer[total_read++] = left_char;
-                left_count--;
+            else{
+                // Один символ
+                write_raw(&current_char, 1);
+                writeCount++;
             }
         }
-        return total_read;
+        return writeCount;
+}
+
+// Чтение с распаковкой RLE
+size_t RleFile::read(char* buf, size_t size) { // AAAAAAAAAAABC AA9BC
+        char* orig_buf = new char[size];
+        size_t decoded_size= read_raw(orig_buf, size);
+        int i = 1;
+        int encoded_size = 0; 
+        if (decoded_size==1){
+            buf[encoded_size++]=orig_buf[0];
         }
+        while (i < decoded_size) {
+            if (orig_buf[i-1]==orig_buf[i]){//AA9BC 
+                for(int k=0; k<orig_buf[i+1]+2; k++){
+                    buf[encoded_size++]=orig_buf[i];
+                    if (encoded_size==size){
+                        break;
+                    }
+                }
+                i+=2;                
+            }
+            else{
+                buf[encoded_size++]=orig_buf[i-1];
+                if (encoded_size==size){
+                    break;
+                }
+            }
+            if(i==decoded_size-1) { //Запись последнего байта
+                    buf[encoded_size++]=orig_buf[i];
+                    if (encoded_size==size){
+                        break;
+                    }
+            }
+            i++;
+        }
+        delete[] orig_buf;
+        return encoded_size;
+}
