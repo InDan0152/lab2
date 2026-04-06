@@ -18,7 +18,7 @@ bool strchr(const char* str, const char ch){
 
 BaseFile::BaseFile(const char* path, const char* par) {
     file = fopen(path, par);
-    cout << "BaseFile Constructor" << path << " par=" << endl;
+    //cout << "BaseFile Constructor" << path << " par=" << endl;
     if (file) { // "rb", "wb+", "ab", "ab+"
         if (strchr(par,'+')) { // strchr ищет символ 
             readable = true;
@@ -72,11 +72,11 @@ bool BaseFile::seek(long offset){
     int result = fseek(file, offset, SEEK_SET);// SEEK_SET(считаем смещение от начала) offset(длина прыжка)
     return (result == 0);
     }
-    size_t BaseFile::read(void *buf, size_t max_bytes) {
-    if (!is_open() || !can_read()) {
-        return 0; 
-    }
-    size_t bytes_read = fread(buf, 1, max_bytes, file); //fread(куда, рамер 1 эл, макс эл, ук на файл)
+size_t BaseFile::read(void *buf, size_t max_bytes) {
+if (!is_open() || !can_read()) {
+    return 0; 
+}
+size_t bytes_read = fread(buf, 1, max_bytes, file); //fread(куда, рамер 1 эл, макс эл, ук на файл)
     return bytes_read;
 }
 
@@ -282,35 +282,132 @@ size_t RleFile::read(char* buf, size_t size) { // AAAAAAAAAAABC AA9BC
         delete[] orig_buf;
         return encoded_size;
 }
-void write_int(BaseFile &file, int n) {
+void write_int(IFile &file, int n) {
     const char minus = '-';
-
-    // 1. Обработка отрицательных чисел
     if (n < 0) {
         file.write(&minus, 1);
         n = -n;
     }
-    
-    // Обработка случая, когда n = 0 (в вашем коде этого не было, стоит добавить)
     if (n == 0) {
         char zero = '0';
         file.write(&zero, 1);
         return;
     }
-
-    // 2. Вычисление начального делителя
     int divisor = 1;
     int tn = n;
     while (tn >= 10) {
         tn /= 10;
         divisor *= 10;
     }
-
-    // 3. Посимвольная запись числа
     while (divisor > 0) {
         char ch = '0' + (n / divisor);
         file.write(&ch, 1);
         n = n % divisor;
         divisor /= 10;
     }
+}
+bool BaseFile::can_read() const {
+    return readable;
+}
+bool BaseFile::can_write() const {
+    return writable;};
+size_t Base32File2::write(const void *buf, size_t n_bytes) {
+    if (!target || n_bytes == 0) return 0;
+
+    int encoded_size = encoded32_size(n_bytes); 
+    char *encoded_data = new char[encoded_size + 1];
+    
+    if (encode32(reinterpret_cast<const char*>(buf), n_bytes, encoded_data) == 0) {
+        target->write(encoded_data, encoded_size);
+        delete[] encoded_data;
+        return n_bytes; 
+    }
+    delete[] encoded_data;
+    return 0;
+}
+size_t Base32File2::read(void *buf, size_t n_bytes) {
+    if (!target) return 0;
+    return target->read(buf, n_bytes);
+}
+int Base32File2::encode32(const char *raw_data, int raw_size, char *dst)
+{
+    // Проверка на корректный ввод
+    if (!raw_data || raw_size <= 0 || !dst)
+    {
+        return 1;
+    }
+
+    int bit_buffer = 0;     // Буфер для битов - временной хранилище
+    int bits_in_buffer = 0; // Биты в буффере
+    int dst_index = 0;      // Индекс в выходном массиве
+
+    // Накапливаем буффер
+    for (int i = 0; i < raw_size; i++)
+    {
+
+        // Добавляем байт в буфер, сдвиг на 8 бит влево
+        bit_buffer = (bit_buffer << 8) | (unsigned char)raw_data[i]; 
+        // сдвигаем влево, чтобы освободить место для новых данных
+        bits_in_buffer += 8;
+
+        // Пока в буфере >=5 бит, извлекаем группы по 5 бит.
+        while (bits_in_buffer >= 5)
+        {
+            int index = (bit_buffer >> (bits_in_buffer - 5)) & 0x1F; // Извлекаем старшие 5 бит, используя побитовую маску из 5 единиц
+            dst[dst_index++] = encode_table[index];                  // Находим соответсвующий символ и записываем его в массив
+            bits_in_buffer -= 5;
+        }
+    }
+
+    // Если после всех байт осталось < 5 бит, добиваем нулями справа до 5 бит.
+    if (bits_in_buffer > 0)
+    {
+        int index = (bit_buffer << (5 - bits_in_buffer)) & 0x1F;
+        dst[dst_index++] = encode_table[index];
+    }
+
+    return 0;
+}
+int Base32File2::encoded32_size(int raw_size)
+{
+    return (raw_size * 8 + 4) / 5; //+4 округляет вверх
+}
+size_t RleFile2::read(void *buf, size_t n_bytes) {
+    if (!target) return 0;
+    return target->read(buf, n_bytes);
+}
+size_t RleFile2::write(const void* buf, size_t n_bytes) {
+        size_t writeCount=0;
+        size_t i = 0;
+        const char* ptr = static_cast<const char*>(buf);
+        while (i < n_bytes) {// AAAA AA4  AAA AA3 AA AA2 
+            char current_char = ptr[i];
+            unsigned short count = 0;
+
+            // Считаем серию одинаковых байтов (макс 255)
+            while (i < n_bytes && ptr[i] == current_char && count < 257) {
+                count++;
+                i++;
+            }
+            if (count>1){
+                // Записываем пару в файл через базовый метод
+                write_raw(&current_char, 1);
+                write_raw(&current_char, 1);
+                count-=2; // два у нас есть 
+                write_raw(&count, 1);
+                writeCount+=3;
+            }
+            else{
+                // Один символ
+                write_raw(&current_char, 1);
+                writeCount++;
+            }
+        }
+        return writeCount;
+}
+size_t RleFile2::write_raw(const void *buf, size_t n_bytes) {
+    if (target) {
+        return target->write(buf, n_bytes);
+    }
+    return 0;
 }
