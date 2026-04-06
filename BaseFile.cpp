@@ -282,3 +282,35 @@ size_t RleFile::read(char* buf, size_t size) { // AAAAAAAAAAABC AA9BC
         delete[] orig_buf;
         return encoded_size;
 }
+void write_int(BaseFile &file, int n) {
+    const char minus = '-';
+
+    // 1. Обработка отрицательных чисел
+    if (n < 0) {
+        file.write(&minus, 1);
+        n = -n;
+    }
+    
+    // Обработка случая, когда n = 0 (в вашем коде этого не было, стоит добавить)
+    if (n == 0) {
+        char zero = '0';
+        file.write(&zero, 1);
+        return;
+    }
+
+    // 2. Вычисление начального делителя
+    int divisor = 1;
+    int tn = n;
+    while (tn >= 10) {
+        tn /= 10;
+        divisor *= 10;
+    }
+
+    // 3. Посимвольная запись числа
+    while (divisor > 0) {
+        char ch = '0' + (n / divisor);
+        file.write(&ch, 1);
+        n = n % divisor;
+        divisor /= 10;
+    }
+}

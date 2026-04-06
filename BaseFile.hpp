@@ -27,7 +27,8 @@ class BaseFile{
     long tell();
     bool seek(long offset);
     virtual size_t write(const void *buf, size_t n_bytes); 
-    virtual size_t read(void *buf, size_t max_bytes);  
+    virtual size_t read(void *buf, size_t max_bytes); 
+     
 };
 class Base32File:public BaseFile{
     public:
@@ -52,3 +53,4 @@ public:
     size_t write(const char* data, size_t size);
     size_t read(char* buf, size_t size);
 };
+void write_int(BaseFile &file, int n);
