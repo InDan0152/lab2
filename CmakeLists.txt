@@ -3,4 +3,4 @@ project(lab2)
 
 set(CMAKE_CXX_STANDARD 17) # Устанавливаем стандарт C++, например 17
 
-add_executable(lab2 lab2.cpp  MyString.cpp BaseFile.cpp)
+add_executable(lab2 lab2.cpp  MyString.cpp BaseFile.cpp tests.cpp)

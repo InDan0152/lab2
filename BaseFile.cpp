@@ -40,7 +40,6 @@ BaseFile::BaseFile(const char* path, const char* par) {
 }
 
 
-
 size_t BaseFile::write_raw(const void *buf, size_t n_bytes) {
     if (!is_open() || !can_write()) {
         return 0;
@@ -56,6 +55,7 @@ size_t BaseFile::read_raw(void *buf, size_t max_bytes) {
     size_t bytes_read = fread(buf, 1, max_bytes, file); //fread(куда, рамер 1 эл, макс эл, ук на файл)
     return bytes_read;
 }
+
 
 long BaseFile::tell() {
     if (!is_open()) {
@@ -250,14 +250,14 @@ size_t RleFile::write(const char* data, size_t size) {
 size_t RleFile::read(char* buf, size_t size) { // AAAAAAAAAAABC AA9BC
         char* orig_buf = new char[size];
         size_t decoded_size= read_raw(orig_buf, size);
-        int i = 1;
-        int encoded_size = 0; 
+        size_t i = 1;
+        size_t encoded_size = 0; 
         if (decoded_size==1){
             buf[encoded_size++]=orig_buf[0];
         }
         while (i < decoded_size) {
             if (orig_buf[i-1]==orig_buf[i]){//AA9BC 
-                for(int k=0; k<orig_buf[i+1]+2; k++){
+                for(size_t k=0; k<orig_buf[i+1]+2; k++){
                     buf[encoded_size++]=orig_buf[i];
                     if (encoded_size==size){
                         break;
@@ -306,6 +306,9 @@ void write_int(IFile &file, int n) {
         divisor /= 10;
     }
 }
+bool BaseFile::is_open() const {
+    return file;
+}
 bool BaseFile::can_read() const {
     return readable;
 }
@@ -318,9 +321,9 @@ size_t Base32File2::write(const void *buf, size_t n_bytes) {
     char *encoded_data = new char[encoded_size + 1];
     
     if (encode32(reinterpret_cast<const char*>(buf), n_bytes, encoded_data) == 0) {
-        target->write(encoded_data, encoded_size);
+        target->write_raw(encoded_data, encoded_size);
         delete[] encoded_data;
-        return n_bytes; 
+        return encoded_size; 
     }
     delete[] encoded_data;
     return 0;
@@ -373,8 +376,39 @@ int Base32File2::encoded32_size(int raw_size)
     return (raw_size * 8 + 4) / 5; //+4 округляет вверх
 }
 size_t RleFile2::read(void *buf, size_t n_bytes) {
-    if (!target) return 0;
-    return target->read(buf, n_bytes);
+        char* orig_buf = new char[n_bytes];
+        size_t decoded_size= target->read_raw(orig_buf, n_bytes);
+        size_t i = 1;
+        size_t encoded_size = 0; 
+        if (decoded_size==1){
+            ((char*)buf)[encoded_size++]=orig_buf[0];
+        }
+        while (i < decoded_size) {
+            if (orig_buf[i-1]==orig_buf[i]){//AA9BC 
+                for(size_t k=0; k<orig_buf[i+1]+2; k++){
+                    ((char*)buf)[encoded_size++]=orig_buf[i];
+                    if (encoded_size==n_bytes){
+                        break;
+                    }
+                }
+                i+=2;                
+            }
+            else{
+                ((char*)buf)[encoded_size++]=orig_buf[i-1];
+                if (encoded_size==n_bytes){
+                    break;
+                }
+            }
+            if(i==decoded_size-1) { //Запись последнего байта
+                    ((char*)buf)[encoded_size++]=orig_buf[i];
+                    if (encoded_size==n_bytes){
+                        break;
+                    }
+            }
+            i++;
+        }
+        delete[] orig_buf;
+        return encoded_size;   
 }
 size_t RleFile2::write(const void* buf, size_t n_bytes) {
         size_t writeCount=0;
@@ -391,23 +425,18 @@ size_t RleFile2::write(const void* buf, size_t n_bytes) {
             }
             if (count>1){
                 // Записываем пару в файл через базовый метод
-                write_raw(&current_char, 1);
-                write_raw(&current_char, 1);
+                target->write_raw(&current_char, 1);
+                target->write_raw(&current_char, 1);
                 count-=2; // два у нас есть 
-                write_raw(&count, 1);
+                target->write_raw(&count, 1);
                 writeCount+=3;
             }
             else{
                 // Один символ
-                write_raw(&current_char, 1);
+                target->write_raw(&current_char, 1);
                 writeCount++;
             }
         }
         return writeCount;
 }
-size_t RleFile2::write_raw(const void *buf, size_t n_bytes) {
-    if (target) {
-        return target->write(buf, n_bytes);
-    }
-    return 0;
-}
+

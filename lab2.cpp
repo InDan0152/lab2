@@ -16,6 +16,7 @@
 #include <iostream>
 #include <cstring> 
 #include "Mystring.hpp"
+#include "tests.hpp"
 #include "BaseFile.hpp"
 
 using namespace std;
@@ -580,8 +581,6 @@ int main() {
      */
 
     {
-
     }
-
     return 0;
 }
